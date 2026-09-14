@@ -1,0 +1,90 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1788459175415,
+      "tag": "0000_sweet_nova",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1788459894193,
+      "tag": "0001_reflective_cassandra_nova",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1788528000000,
+      "tag": "0002_photo_fridge_stock",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1788528300000,
+      "tag": "0003_exact_breakfast_stock",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1788528600000,
+      "tag": "0004_exact_pantry_stock",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1788528900000,
+      "tag": "0005_cupboard_photo_stock",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1788529200000,
+      "tag": "0006_shelf_photo_stock",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1788529500000,
+      "tag": "0007_freezer_stock",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1788530400000,
+      "tag": "0008_remove_incorrect_fish_stock",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1788531000000,
+      "tag": "0009_remove_incorrect_plain_flour",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1788531600000,
+      "tag": "0010_nespresso_stock",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1788609323895,
+      "tag": "0011_skinny_union_jack",
+      "breakpoints": true
+    }
+  ]
+}
