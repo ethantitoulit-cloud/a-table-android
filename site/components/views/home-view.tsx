@@ -56,7 +56,7 @@ export function HomeView({ date, today, niceDate, moveDate, setDate, people, set
   }, [tiredOpen, suggestionCount, nextSuggestions]);
 
   return <section className="content">
-    <div className="intro-row"><div><div className="home-date-line"><p className="eyebrow" suppressHydrationWarning>{niceDate(date).toUpperCase()}</p><div className="home-date-selector" aria-label="Choisir le jour affiché"><button aria-label="Voir le jour précédent" onClick={() => setDate((value) => moveDate(value, -1))}><ChevronLeft size={18} /></button>{date !== today() && <button className="home-date-today" onClick={() => setDate(today())}>Aujourd’hui</button>}<button aria-label="Voir le jour suivant" onClick={() => setDate((value) => moveDate(value, 1))}><ChevronRight size={18} /></button></div></div><h2>À table !</h2></div>
+    <div className="intro-row"><div><div className="home-date-line"><p className="eyebrow" suppressHydrationWarning>{niceDate(date).toUpperCase()}</p><div className="home-date-selector" aria-label="Choisir le jour affiché"><button aria-label="Voir le jour précédent" onClick={() => setDate((value) => moveDate(value, -1))}><ChevronLeft size={18} /></button>{date !== today() && <button className="home-date-today" onClick={() => setDate(today())}>Aujourd’hui</button>}<button aria-label="Voir le jour suivant" onClick={() => setDate((value) => moveDate(value, 1))}><ChevronRight size={18} /></button></div></div></div>
       <div className="people"><Users size={17} /><button onClick={() => setPeople(Math.max(1, people - 1))}>−</button><b>{people}</b><button onClick={() => setPeople(Math.min(8, people + 1))}>+</button></div>
     </div>
     {SHOW_TIRED_MODE && <div className="tired-mode">
