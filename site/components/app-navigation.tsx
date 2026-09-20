@@ -16,13 +16,30 @@ export function AppNavigation({ view, canEdit, saveStatus, dataStatus, moreOpen,
   toggleMore: () => void;
   scanFile: (file?: File) => void;
 }) {
+  async function unlockEditing() {
+    const pin = window.prompt("Saisis le code de l’application À table");
+    if (!pin) return;
+    const response = await fetch("/api/mobile-login", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pin }),
+    });
+    if (response.ok) {
+      window.location.reload();
+      return;
+    }
+    const result = await response.json().catch(() => null) as { error?: string } | null;
+    window.alert(result?.error || "Connexion impossible. Réessaie.");
+  }
+
   const tabs = [
     ["soir", ChefHat, "À table"], ["semaine", CalendarDays, "La semaine"], ["recettes", BookOpen, "Recettes"], ["stocks", Refrigerator, "Réserves"], ["courses", ShoppingBasket, "Courses"],
   ] as const;
   return <>
     <header className="topbar">
       <div className="brand"><div className="brand-mark"><ChefHat /></div><div><h1>À table !</h1><p>Enfin la réponse à « Qu’est-ce qu’on mange ? »</p></div></div>
-      {canEdit === false && <a className="read-only-badge" href="/signin-with-chatgpt?return_to=/" target="_top">Consultation uniquement · Se connecter pour modifier</a>}
+      {canEdit === false && <button className="read-only-badge" type="button" onClick={() => void unlockEditing()}>Consultation uniquement · Saisir le code pour modifier</button>}
       {saveStatus !== "idle" && <span className={`save-status ${saveStatus}`} role="status">{saveStatus === "saving" ? "Enregistrement…" : saveStatus === "saved" ? "Enregistré" : "Non enregistré — réessayer"}</span>}
       <input ref={fileRef} className="sr-only" type="file" aria-label="Photo des courses à scanner" accept="image/*,application/pdf" capture="environment" onChange={(event) => scanFile(event.target.files?.[0])} />
     </header>
