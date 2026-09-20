@@ -16,6 +16,8 @@ import android.webkit.WebViewClient
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 
 class MainActivity : AppCompatActivity() {
     private lateinit var webView: WebView
@@ -39,6 +41,11 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         webView = WebView(this)
+        ViewCompat.setOnApplyWindowInsetsListener(webView) { view, insets ->
+            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            view.setPadding(bars.left, bars.top, bars.right, bars.bottom)
+            insets
+        }
         setContentView(webView)
 
         webView.settings.apply {
@@ -56,7 +63,12 @@ class MainActivity : AppCompatActivity() {
             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
                 val uri = request.url
                 return if (uri.scheme == "http" || uri.scheme == "https") {
-                    false
+                    if (uri.host.equals(APP_HOST, ignoreCase = true)) {
+                        false
+                    } else {
+                        runCatching { startActivity(Intent(Intent.ACTION_VIEW, uri)) }
+                        true
+                    }
                 } else {
                     runCatching { startActivity(Intent(Intent.ACTION_VIEW, uri)) }
                     true
@@ -118,5 +130,6 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         private const val APP_URL = "https://quest-ce-quon-mange.ethantitoulit.chatgpt.site/"
+        private const val APP_HOST = "quest-ce-quon-mange.ethantitoulit.chatgpt.site"
     }
 }
