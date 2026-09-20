@@ -5,6 +5,7 @@ import {
   LOCAL_RECIPE_MIGRATION_VERSION,
   LOCAL_RECIPE_URLS,
   MY_RECIPE_BOX_MIGRATION_VERSION,
+  ODELICES_MIGRATION_VERSION,
   RECIPES,
   TATIE_MARYSE_MIGRATION_VERSION,
   WEB_RECIPE_MIGRATION_VERSION,
@@ -114,6 +115,31 @@ export async function migrateTatieMaryseCatalog(existing: Recipe[], setRecipes: 
   }
   await saveSetting("tatieMaryseMigrationVersion", TATIE_MARYSE_MIGRATION_VERSION);
   setStatus(added ? `${added} recettes Tatie Maryse ajoutées.` : "Les recettes Tatie Maryse accessibles sont déjà présentes ou n’ont pas passé le contrôle qualité.");
+  return [...catalog.values()];
+}
+
+export async function migrateOdelicesCatalog(existing: Recipe[], setRecipes: RecipeSetter, setStatus: (status: string) => void, saveSetting: SaveSetting) {
+  const catalog = new Map(existing.filter((recipe) => recipe.source).map((recipe) => [recipe.source as string, recipe]));
+  let added = 0;
+  setStatus("Import des recettes Ôdélices…");
+  for (let page = 1; page <= 10; page += 1) {
+    const response = await fetch("/api/import-catalog", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kind: "odelices", page }) }).catch(() => null);
+    if (!response?.ok) continue;
+    const data = await response.json().catch(() => ({}));
+    const incoming = Array.isArray(data.recipes) ? data.recipes as Recipe[] : [];
+    for (const recipe of incoming) {
+      if (!recipe.source || catalog.has(recipe.source) || auditRecipe(recipe).reasons.length) continue;
+      if ([...catalog.values()].some((saved) => norm(saved.name) === norm(recipe.name))) continue;
+      catalog.set(recipe.source, { ...recipe, tags: ["tout"] });
+      added += 1;
+    }
+    const next = [...catalog.values()];
+    setRecipes(next);
+    await saveSetting("webRecipes", next);
+    setStatus(`Ôdélices : ${added} nouvelle${added > 1 ? "s" : ""} recette${added > 1 ? "s" : ""} validée${added > 1 ? "s" : ""}…`);
+  }
+  await saveSetting("odelicesMigrationVersion", ODELICES_MIGRATION_VERSION);
+  setStatus(added ? `${added} recettes Ôdélices ajoutées.` : "Les recettes Ôdélices accessibles sont déjà présentes ou n’ont pas passé le contrôle qualité.");
   return [...catalog.values()];
 }
 
