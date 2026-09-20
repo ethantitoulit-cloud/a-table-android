@@ -127,7 +127,7 @@ export const recipeThemes = (recipe: Recipe): Recipe["themes"] => {
 };
 export const buildCuratedBank = (recipes: Recipe[]) => {
   const unique = [...new Map(recipes
-    .filter((recipe) => recipe.source && isRecipeConcordant(recipe) && (recipe.course === "autre" || automaticRecipeNutritionAudit(recipe).eligible))
+    .filter((recipe) => recipe.source && isRecipeConcordant(recipe))
     .map((recipe) => [norm(recipe.name), { ...recipe, themes: recipeThemes(recipe), occasional: false }])).values()];
   const quotas: Record<NonNullable<Recipe["course"]>, number> = { "entrée": 60, plat: 165, dessert: 60, autre: 15 };
   const score = (recipe: Recipe) => {
@@ -230,20 +230,7 @@ export const stepMentionsIngredient = (step: string, ingredient: string) => {
   return words(canonicalIngredient(ingredient)).some((word) => stepWords.has(word));
 };
 export const isEverydayRecipe = (recipe: Recipe) => {
-  if (!automaticRecipeNutritionAudit(recipe).eligible) return false;
-  const richName = /beignet|frit|friture|raclette|tartiflette|foie gras|charcuterie|lardons?|bacon|triple chocolat|caramel au beurre|chantilly|gâteau d['’ ]anniversaire|gateau d['’ ]anniversaire/i.test(recipe.name);
-  if (richName) return false;
-  const ingredients = recipe.ingredients.map(canonicalIngredient);
-  const addsButter = ingredients.some((ingredient) => ingredient === "beurre");
-  const addsOil = ingredients.some((ingredient) => ingredient === "huile" || ingredient.startsWith("huile "));
-  const alreadyRichProtein = ingredients.some((ingredient) => /(sardine|maquereau|saumon)/.test(ingredient));
-  if (addsButter && addsOil && alreadyRichProtein) return false;
-  const course = recipe.course || "plat";
-  const maxCalories = course === "plat" ? 750 : 350;
-  const maxFat = course === "plat" ? 30 : 18;
-  if (recipe.calories && recipe.calories > maxCalories) return false;
-  if (recipe.fatGrams && recipe.fatGrams > maxFat) return false;
-  return true;
+  return Boolean(recipe.name && recipe.ingredients.length && recipe.steps.length);
 };
 export const isRejectedRecipe = (recipe: Recipe) => /oeufs? brouilles? aux sardines?/.test(norm(recipe.name));
 export const isMainDish = (recipe: Recipe) => !/(rillettes?|tartinade|toast|tartines?|bouchees?|dip|aperitif)/.test(norm(recipe.name));
