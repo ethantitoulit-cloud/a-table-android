@@ -19,6 +19,9 @@ test("ouvre la recherche hors de la WebView Android", async () => {
   assert.match(android, /APP_HOST/);
   assert.match(android, /Intent\.ACTION_VIEW/);
   assert.match(android, /WindowInsetsCompat\.Type\.systemBars/);
+  assert.match(android, /SwipeRefreshLayout/);
+  assert.match(android, /setOnRefreshListener \{ webView\.reload\(\) \}/);
+  assert.match(android, /canScrollVertically\(-1\)/);
 });
 
 test("accepte les recettes JSON-LD imbriquées et les liens Google", async () => {
