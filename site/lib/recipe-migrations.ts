@@ -115,7 +115,7 @@ export async function migrateTatieMaryseCatalog(existing: Recipe[], setRecipes: 
   }
   await saveSetting("tatieMaryseMigrationVersion", TATIE_MARYSE_MIGRATION_VERSION);
   setStatus(added ? `${added} recettes Tatie Maryse ajoutées.` : "Les recettes Tatie Maryse accessibles sont déjà présentes ou n’ont pas passé le contrôle qualité.");
-  return [...catalog.values()];
+  return migrateOdelicesCatalog([...catalog.values()], setRecipes, setStatus, saveSetting);
 }
 
 export async function migrateOdelicesCatalog(existing: Recipe[], setRecipes: RecipeSetter, setStatus: (status: string) => void, saveSetting: SaveSetting) {
