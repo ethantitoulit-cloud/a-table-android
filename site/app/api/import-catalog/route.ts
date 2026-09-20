@@ -105,11 +105,6 @@ async function importRecipe(url: string, course: "entrée" | "plat" | "dessert",
     const calories = nutritionNumber((recipe.nutrition as JsonValue | undefined)?.calories);
     const fatGrams = nutritionNumber((recipe.nutrition as JsonValue | undefined)?.fatContent);
     if (invalidCatalogTitle(textOnly(recipe.name), course)) return null;
-    const richName = /beignet|frit|friture|raclette|tartiflette|foie gras|charcuterie|lardons?|bacon|triple chocolat|caramel au beurre|chantilly|gâteau d['’ ]anniversaire|gateau d['’ ]anniversaire/i.test(textOnly(recipe.name));
-    const maxCalories = course === "dessert" || course === "entrée" ? 350 : 750;
-    const maxFat = course === "dessert" || course === "entrée" ? 18 : 30;
-    const occasional = Boolean(richName || (calories && calories > maxCalories) || (fatGrams && fatGrams > maxFat));
-    if (occasional && !allowOccasional) return null;
     const category = textOnly(recipe.recipeCategory);
     const inferredCourse: "entrée" | "plat" | "dessert" | "autre" =
       /(dessert|patisserie|pâtisserie|gateau|gâteau|glace|sorbet|flan|tarte sucr|confiture|compote|gourmandise)/i.test(`${category} ${recipe.name}`) ? "dessert" :
@@ -129,7 +124,7 @@ async function importRecipe(url: string, course: "entrée" | "plat" | "dessert",
       tags: ["tout"],
       calories,
       fatGrams,
-      occasional,
+      occasional: false,
     };
     const audited = auditRecipe(candidate);
     return audited.reasons.length ? null : audited.recipe;
