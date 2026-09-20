@@ -1322,7 +1322,6 @@ export default function Home() {
         addSimpleFood={() => void addSimpleFoodToMenu()}
         chooseNoStarter={chooseNoStarter}
         searchWeb={openWebRecipeSearch}
-        importCopied={() => void importCopiedRecipeForWeek()}
         importLink={() => void importWebRecipeForWeek()}
         chooseRecipe={chooseWeekCourse}
       />}
