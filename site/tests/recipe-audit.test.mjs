@@ -65,3 +65,16 @@ test("rejette une omelette au chocolat", () => {
   });
   assert.ok(result.reasons.includes("association culinaire incohérente"));
 });
+
+test("ne refuse pas une recette selon sa richesse nutritionnelle", () => {
+  const result = auditRecipe({
+    ...good,
+    name: "Poisson frit traditionnel",
+    calories: 950,
+    fatGrams: 45,
+    ingredients: ["poisson", "farine", "huile"],
+    ingredientQuantities: { poisson: "1 kg", farine: "150 g", huile: "50 cl" },
+    steps: ["Fariner soigneusement le poisson sur toutes ses faces.", "Faire frire le poisson dans l’huile chaude jusqu’à ce qu’il soit doré."],
+  });
+  assert.deepEqual(result.reasons, []);
+});
