@@ -48,10 +48,11 @@ const recipeHasIngredientConcordance = (ingredients: string[], steps: string[]) 
   return meaningful.length === 0 || mentioned.length / meaningful.length >= 0.75;
 };
 
-function findRecipe(value: unknown): JsonValue | null {
+function findRecipe(value: unknown, depth = 0): JsonValue | null {
+  if (depth > 12) return null;
   if (Array.isArray(value)) {
     for (const item of value) {
-      const found = findRecipe(item);
+      const found = findRecipe(item, depth + 1);
       if (found) return found;
     }
   }
@@ -59,7 +60,10 @@ function findRecipe(value: unknown): JsonValue | null {
     const object = value as JsonValue;
     const type = object["@type"];
     if (type === "Recipe" || (Array.isArray(type) && type.includes("Recipe"))) return object;
-    if (object["@graph"]) return findRecipe(object["@graph"]);
+    for (const child of Object.values(object)) {
+      const found = findRecipe(child, depth + 1);
+      if (found) return found;
+    }
   }
   return null;
 }
@@ -152,6 +156,7 @@ export async function POST(request: Request) {
     "https://www.cuisineaz.com/diaporamas/50-recettes-de-saumon-pour-tous-les-jours-simples-economiques-et-pleines-de-gout-6803/interne/1.aspx",
   ];
   const isTatieMaryse = body.kind === "tatie-maryse";
+  const isOdelices = body.kind === "odelices";
   const isFish = body.kind === "poisson";
   const course = isFish ? "plat" : body.kind === "dessert" ? "dessert" : "entrée";
   const root = course === "dessert"
@@ -160,6 +165,8 @@ export async function POST(request: Request) {
   const page = Math.max(1, Math.min(250, Number(body.page) || 1));
   const listingUrl = isTatieMaryse
     ? page === 1 ? "https://www.tatiemaryse.com/les-recettes/" : `https://www.tatiemaryse.com/les-recettes/page/${page}/`
+    : isOdelices
+      ? page === 1 ? "https://odelices.ouest-france.fr/recettes/" : `https://odelices.ouest-france.fr/recettes/page/${page}/`
     : isFish ? fishCollections[(page - 1) % fishCollections.length] : page === 1 ? root : `${root}/${page}/`;
   try {
     const listing = await fetch(listingUrl, { headers: { "User-Agent": "Mozilla/5.0 RecipeImporter/1.0" } });
@@ -169,9 +176,13 @@ export async function POST(request: Request) {
       ? [...new Set([...html.matchAll(/href=["'](https?:\/\/www\.tatiemaryse\.com\/[^"'#?]+\/|\/[^"'#?]+\/)["']/gi)]
           .map((match) => new URL(match[1], listingUrl).toString())
           .filter((url) => !/\/(?:les-recettes|category|tag|author|boutique|ateliers?|magazine|page|wp-|propos-|plan-du-site)(?:\/|$)/i.test(new URL(url).pathname)))].slice(0, 24)
+      : isOdelices
+        ? [...new Set([...html.matchAll(/href=["'](https?:\/\/odelices\.ouest-france\.fr\/[^"'#?]+|\/[^"'#?]+)["']/gi)]
+            .map((match) => new URL(match[1], listingUrl).toString())
+            .filter((url) => /\/recettes?\//i.test(new URL(url).pathname) && !/\/recettes?\/(?:page|categorie|category|tag|auteur|author)(?:\/|$)/i.test(new URL(url).pathname)))].slice(0, 24)
       : [...new Set([...html.matchAll(/href=["']([^"']*\/recettes\/[^"'#?]+-\d+\.aspx)["']/gi)].map((match) => new URL(match[1], listingUrl).toString()))].slice(0, 24);
     const fishTerms = /poisson|sardine|hareng|thon|maquereau|saumon|cabillaud|colin|lieu|dorade|daurade|truite|anchois|haddock|flétan|merlu|rouget|sole|raie|bonite/i;
-    const recipes = (await Promise.all(urls.map((url) => importRecipe(url, course, isFish ? "poisson" : undefined, isTatieMaryse))))
+    const recipes = (await Promise.all(urls.map((url) => importRecipe(url, course, isFish ? "poisson" : undefined, isTatieMaryse || isOdelices))))
       .filter((recipe) => recipe && (!isFish || fishTerms.test(`${recipe.name} ${recipe.ingredients.join(" ")}`)));
     return Response.json({ recipes, page, course });
   } catch {
