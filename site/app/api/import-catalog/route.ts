@@ -1,4 +1,5 @@
 import { auditRecipe } from "../../../lib/recipe-audit";
+import { parseTatieMaryseRecipe } from "../../../lib/tatie-maryse-parser";
 
 type JsonValue = Record<string, unknown>;
 
@@ -88,6 +89,7 @@ async function importRecipe(url: string, course: "entrée" | "plat" | "dessert",
       try { recipe = findRecipe(JSON.parse(script[1])); } catch { /* bloc suivant */ }
       if (recipe) break;
     }
+    if (!recipe) recipe = parseTatieMaryseRecipe(html, target);
     if (!recipe) return null;
     const instructions = Array.isArray(recipe.recipeInstructions) ? recipe.recipeInstructions : [];
     const rawIngredients = Array.isArray(recipe.recipeIngredient) ? recipe.recipeIngredient : [];
@@ -176,6 +178,8 @@ export async function POST(request: Request) {
             .map((match) => new URL(match[1], listingUrl).toString())
             .filter((url) => /\/recettes?\//i.test(new URL(url).pathname) && !/\/recettes?\/(?:page|categorie|category|tag|auteur|author)(?:\/|$)/i.test(new URL(url).pathname)))].slice(0, 24)
       : [...new Set([...html.matchAll(/href=["']([^"']*\/recettes\/[^"'#?]+-\d+\.aspx)["']/gi)].map((match) => new URL(match[1], listingUrl).toString()))].slice(0, 24);
+    if (isTatieMaryse && page === 1 && !urls.includes("https://www.tatiemaryse.com/poisson-frit/"))
+      urls.unshift("https://www.tatiemaryse.com/poisson-frit/");
     const fishTerms = /poisson|sardine|hareng|thon|maquereau|saumon|cabillaud|colin|lieu|dorade|daurade|truite|anchois|haddock|flétan|merlu|rouget|sole|raie|bonite/i;
     const recipes = (await Promise.all(urls.map((url) => importRecipe(url, course, isFish ? "poisson" : undefined, isTatieMaryse || isOdelices))))
       .filter((recipe) => recipe && (!isFish || fishTerms.test(`${recipe.name} ${recipe.ingredients.join(" ")}`)));
