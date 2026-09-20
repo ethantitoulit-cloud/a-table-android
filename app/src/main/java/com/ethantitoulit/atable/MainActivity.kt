@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
+import android.webkit.CookieManager
 import android.webkit.PermissionRequest
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
@@ -55,6 +56,11 @@ class MainActivity : AppCompatActivity() {
         }
         setContentView(swipeRefresh)
 
+        CookieManager.getInstance().apply {
+            setAcceptCookie(true)
+            setAcceptThirdPartyCookies(webView, true)
+        }
+
         webView.settings.apply {
             javaScriptEnabled = true
             domStorageEnabled = true
@@ -74,7 +80,7 @@ class MainActivity : AppCompatActivity() {
             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
                 val uri = request.url
                 return if (uri.scheme == "http" || uri.scheme == "https") {
-                    if (uri.host.equals(APP_HOST, ignoreCase = true)) {
+                    if (isInternalHost(uri.host)) {
                         false
                     } else {
                         openInBrowser(uri)
@@ -131,6 +137,13 @@ class MainActivity : AppCompatActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         openSharedRecipe(intent)
+    }
+
+    private fun isInternalHost(host: String?): Boolean {
+        val normalized = host?.lowercase().orEmpty()
+        return normalized == APP_HOST ||
+            normalized == "chatgpt.com" || normalized.endsWith(".chatgpt.com") ||
+            normalized == "openai.com" || normalized.endsWith(".openai.com")
     }
 
     private fun openInBrowser(uri: Uri) {
