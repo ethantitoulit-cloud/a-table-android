@@ -128,7 +128,7 @@ class MainActivity : AppCompatActivity() {
         })
 
         if (!openSharedRecipe(intent)) {
-            if (savedInstanceState == null) webView.loadUrl(APP_URL)
+            if (savedInstanceState == null) webView.loadUrl(START_URL)
             else webView.restoreState(savedInstanceState)
         }
     }
@@ -182,7 +182,7 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         private const val APP_URL = "https://quest-ce-quon-mange.ethantitoulit.chatgpt.site/"
-        private const val APP_HOST = "quest-ce-quon-mange.ethantitoulit.chatgpt.site"
+        private const val START_URL = "${APP_URL}signin-with-chatgpt?return_to=%2F"\n        private const val APP_HOST = "quest-ce-quon-mange.ethantitoulit.chatgpt.site"
         private val URL_PATTERN = Regex("""https?://\S+""", RegexOption.IGNORE_CASE)
     }
 }
