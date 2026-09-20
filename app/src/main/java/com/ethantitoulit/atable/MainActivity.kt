@@ -77,7 +77,7 @@ class MainActivity : AppCompatActivity() {
                     if (uri.host.equals(APP_HOST, ignoreCase = true)) {
                         false
                     } else {
-                        runCatching { startActivity(Intent(Intent.ACTION_VIEW, uri)) }
+                        openInBrowser(uri)
                         true
                     }
                 } else {
@@ -121,11 +121,39 @@ class MainActivity : AppCompatActivity() {
             }
         })
 
-        if (savedInstanceState == null) {
-            webView.loadUrl(APP_URL)
-        } else {
-            webView.restoreState(savedInstanceState)
+        if (!openSharedRecipe(intent)) {
+            if (savedInstanceState == null) webView.loadUrl(APP_URL)
+            else webView.restoreState(savedInstanceState)
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        openSharedRecipe(intent)
+    }
+
+    private fun openInBrowser(uri: Uri) {
+        val browserIntent = Intent(Intent.ACTION_VIEW, uri).apply {
+            addCategory(Intent.CATEGORY_BROWSABLE)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        runCatching { startActivity(browserIntent) }
+    }
+
+    private fun openSharedRecipe(intent: Intent?): Boolean {
+        if (intent?.action != Intent.ACTION_SEND || intent.type?.startsWith("text/") != true) return false
+        val text = intent.getStringExtra(Intent.EXTRA_TEXT).orEmpty()
+        val url = URL_PATTERN.find(text)?.value?.trimEnd('.', ',', ';', '!', '?', ')') ?: return false
+        val title = intent.getStringExtra(Intent.EXTRA_SUBJECT).orEmpty()
+        val importUrl = Uri.parse(APP_URL).buildUpon()
+            .appendQueryParameter("url", url)
+            .appendQueryParameter("title", title)
+            .build()
+            .toString()
+        webView.loadUrl(importUrl)
+        intent.action = null
+        return true
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -142,5 +170,6 @@ class MainActivity : AppCompatActivity() {
     companion object {
         private const val APP_URL = "https://quest-ce-quon-mange.ethantitoulit.chatgpt.site/"
         private const val APP_HOST = "quest-ce-quon-mange.ethantitoulit.chatgpt.site"
+        private val URL_PATTERN = Regex("""https?://\S+""", RegexOption.IGNORE_CASE)
     }
 }
