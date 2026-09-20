@@ -26,7 +26,6 @@ const normalize = (value: string) => value.toLocaleLowerCase("fr-FR").replace(/�
 
 const falseIngredient = /^(preparation|melange|montage|garniture|appareil|finition|decor|decoration|pour .+|ingredients?|facultatif)$/;
 const fillerStep = /^(preparer (les ingredients|le plan de travail)|sortir les ustensiles|gouter|rectifier l assaisonnement|servir avec .* selon l envie)/;
-const richTitle = /(beignet|friture|raclette|tartiflette|foie gras|triple chocolat|caramel au beurre|chantilly|gateau d anniversaire|tiramisu|brownie|cookie|chamallow|marshmallow|bonbon|confiture|coulant au chocolat|mascarpone|biscuits? pas cher|quiche.*(maroilles|chorizo)|minis? souffles? au chorizo)/;
 const commercialNoise = /(fast oche|\bthermomix\b|®)/;
 const cleanIngredientLabel = (value: string) => value
   .replace(/\(s\)/gi, "s")
@@ -99,12 +98,6 @@ export const auditRecipe = <T extends AuditableRecipe>(recipe: T) => {
     return words.length > 0 && !words.some((word) => preparation.includes(word));
   });
   if (!recipe.custom && missingInSteps.length) reasons.push(`ingrédient absent des étapes : ${missingInSteps.slice(0, 3).join(", ")}`);
-
-  const ingredientsText = normalize(ingredients.join(" "));
-  const doublyRich = /(beurre)/.test(ingredientsText) && /(huile)/.test(ingredientsText) && /(sardine|maquereau|saumon|lardon|bacon)/.test(ingredientsText);
-  const maxCalories = course === "plat" ? 750 : course === "autre" ? 500 : 350;
-  const maxFat = course === "plat" ? 30 : course === "autre" ? 25 : 18;
-  if (!recipe.custom && (richTitle.test(title) || doublyRich || (recipe.calories && recipe.calories > maxCalories) || (recipe.fatGrams && recipe.fatGrams > maxFat))) reasons.push("trop riche pour la banque quotidienne");
 
   const cleanedIngredients = ingredients.filter((ingredient) => !falseIngredient.test(normalize(ingredient)));
   const cleanedSteps = steps.filter((step) => !fillerStep.test(normalize(step)));
