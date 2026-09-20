@@ -1,5 +1,6 @@
 import { auditRecipe } from "../../../lib/recipe-audit";
 import { recipeHasIngredientConcordance } from "../../../lib/ingredient-concordance";
+import { parseTatieMaryseRecipe } from "../../../lib/tatie-maryse-parser";
 
 type JsonValue = Record<string, unknown>;
 
@@ -94,6 +95,7 @@ export async function POST(request: Request) {
       try { recipe = findRecipe(JSON.parse(script[1])); } catch { /* autre bloc JSON-LD */ }
       if (recipe) break;
     }
+    if (!recipe) recipe = parseTatieMaryseRecipe(html, target);
     if (!recipe) return Response.json({ error: "Cette page ne fournit pas une fiche recette lisible automatiquement" }, { status: 422 });
     const instructions = Array.isArray(recipe.recipeInstructions)
       ? recipe.recipeInstructions
