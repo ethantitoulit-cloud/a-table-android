@@ -6,6 +6,9 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
+import android.text.InputType
+import android.widget.EditText
+import android.widget.Toast
 import android.webkit.CookieManager
 import android.webkit.PermissionRequest
 import android.webkit.ValueCallback
@@ -17,15 +20,21 @@ import android.webkit.WebViewClient
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AlertDialog
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
 
 class MainActivity : AppCompatActivity() {
     private lateinit var webView: WebView
     private lateinit var swipeRefresh: SwipeRefreshLayout
     private var fileCallback: ValueCallback<Array<Uri>>? = null
     private var pendingWebPermission: PermissionRequest? = null
+    private var pinDialogVisible = false
+    private var webSearchMode = false
 
     private val filePicker = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         val uris = WebChromeClient.FileChooserParams.parseResult(result.resultCode, result.data)
@@ -75,12 +84,22 @@ class MainActivity : AppCompatActivity() {
         webView.webViewClient = object : WebViewClient() {
             override fun onPageFinished(view: WebView, url: String) {
                 swipeRefresh.isRefreshing = false
+                val host = Uri.parse(url).host
+                if (isInternalHost(host)) {
+                    webSearchMode = false
+                    if (!hasMobileSession()) showPinDialog()
+                } else if (webSearchMode && !isSearchHost(host)) {
+                    injectImportButton(view)
+                }
             }
 
             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
                 val uri = request.url
                 return if (uri.scheme == "http" || uri.scheme == "https") {
                     if (isInternalHost(uri.host)) {
+                        false
+                    } else if (isSearchHost(uri.host) || webSearchMode) {
+                        webSearchMode = true
                         false
                     } else {
                         openInBrowser(uri)
@@ -152,6 +171,111 @@ class MainActivity : AppCompatActivity() {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
         runCatching { startActivity(browserIntent) }
+    }
+
+    private fun isSearchHost(host: String?): Boolean {
+        val normalized = host?.lowercase().orEmpty()
+        return normalized == "google.com" || normalized.endsWith(".google.com") ||
+            normalized == "bing.com" || normalized.endsWith(".bing.com")
+    }
+
+    private fun injectImportButton(view: WebView) {
+        val script = """
+            (() => {
+              if (document.getElementById('atable-import-button')) return;
+              const button = document.createElement('button');
+              button.id = 'atable-import-button';
+              button.type = 'button';
+              button.textContent = '+  Importer dans À table';
+              button.setAttribute('aria-label', 'Importer cette recette dans À table');
+              Object.assign(button.style, {
+                position: 'fixed', left: '16px', right: '16px', bottom: '18px',
+                zIndex: '2147483647', minHeight: '56px', border: '0',
+                borderRadius: '28px', background: '#1f6b50', color: '#fff',
+                fontSize: '17px', fontWeight: '800', fontFamily: 'sans-serif',
+                boxShadow: '0 8px 28px rgba(0,0,0,.28)'
+              });
+              button.addEventListener('click', () => {
+                const destination = '${APP_URL}?url=' + encodeURIComponent(location.href) +
+                  '&title=' + encodeURIComponent(document.title || 'Recette du Web');
+                location.href = destination;
+              });
+              document.documentElement.style.paddingBottom = '88px';
+              document.body.appendChild(button);
+            })();
+        """.trimIndent()
+        view.evaluateJavascript(script, null)
+    }
+
+    private fun hasMobileSession(): Boolean =
+        CookieManager.getInstance().getCookie(APP_URL)?.split(";")?.any {
+            it.trim().startsWith("atable_mobile=")
+        } == true
+
+    private fun showPinDialog() {
+        if (pinDialogVisible || isFinishing) return
+        pinDialogVisible = true
+        val input = EditText(this).apply {
+            inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_VARIATION_PASSWORD
+            hint = "Code à 4 chiffres"
+            maxLines = 1
+        }
+        val dialog = AlertDialog.Builder(this)
+            .setTitle("Déverrouiller À table")
+            .setMessage("Saisissez votre code une seule fois sur cet appareil.")
+            .setView(input)
+            .setNegativeButton("Plus tard") { _, _ -> pinDialogVisible = false }
+            .setPositiveButton("Déverrouiller", null)
+            .create()
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                val pin = input.text.toString().trim()
+                if (pin.length != 4) {
+                    input.error = "Saisissez les 4 chiffres"
+                } else {
+                    dialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled = false
+                    loginWithPin(pin, dialog)
+                }
+            }
+        }
+        dialog.setOnDismissListener { pinDialogVisible = false }
+        dialog.show()
+    }
+
+    private fun loginWithPin(pin: String, dialog: AlertDialog) {
+        Thread {
+            val result = runCatching {
+                val connection = (URL("${APP_URL}api/mobile-login").openConnection() as HttpURLConnection).apply {
+                    requestMethod = "POST"
+                    connectTimeout = 12_000
+                    readTimeout = 12_000
+                    doOutput = true
+                    setRequestProperty("Content-Type", "application/json")
+                }
+                connection.outputStream.use { it.write(JSONObject().put("pin", pin).toString().toByteArray()) }
+                val status = connection.responseCode
+                val cookie = connection.headerFields["Set-Cookie"]?.firstOrNull()
+                connection.disconnect()
+                status to cookie
+            }.getOrElse { -1 to null }
+            runOnUiThread {
+                val (status, cookie) = result
+                if (status in 200..299 && cookie != null) {
+                    CookieManager.getInstance().setCookie(APP_URL, cookie) {
+                        CookieManager.getInstance().flush()
+                        dialog.dismiss()
+                        webView.reload()
+                    }
+                } else {
+                    dialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled = true
+                    Toast.makeText(
+                        this,
+                        if (status == 429) "Trop d’essais. Réessayez dans quelques minutes." else "Code incorrect",
+                        Toast.LENGTH_LONG,
+                    ).show()
+                }
+            }
+        }.start()
     }
 
     private fun openSharedRecipe(intent: Intent?): Boolean {
