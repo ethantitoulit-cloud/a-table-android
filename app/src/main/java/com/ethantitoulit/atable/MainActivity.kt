@@ -176,6 +176,7 @@ class MainActivity : AppCompatActivity() {
     private fun isSearchHost(host: String?): Boolean {
         val normalized = host?.lowercase().orEmpty()
         return normalized == "google.com" || normalized.endsWith(".google.com") ||
+            normalized == "share.google" || normalized.endsWith(".share.google") ||
             normalized == "bing.com" || normalized.endsWith(".bing.com")
     }
 
@@ -196,8 +197,12 @@ class MainActivity : AppCompatActivity() {
                 boxShadow: '0 8px 28px rgba(0,0,0,.28)'
               });
               button.addEventListener('click', () => {
+                const recipeData = Array.from(document.querySelectorAll('script[type="application/ld+json"]'))
+                  .map((node) => node.textContent || '')
+                  .find((content) => /["']Recipe["']/.test(content)) || '';
                 const destination = '${APP_URL}?url=' + encodeURIComponent(location.href) +
-                  '&title=' + encodeURIComponent(document.title || 'Recette du Web');
+                  '&title=' + encodeURIComponent(document.title || 'Recette du Web') +
+                  (recipeData ? '#recipeData=' + encodeURIComponent(recipeData) : '');
                 location.href = destination;
               });
               document.documentElement.style.paddingBottom = '88px';
@@ -283,6 +288,12 @@ class MainActivity : AppCompatActivity() {
         val text = intent.getStringExtra(Intent.EXTRA_TEXT).orEmpty()
         val url = URL_PATTERN.find(text)?.value?.trimEnd('.', ',', ';', '!', '?', ')') ?: return false
         val title = intent.getStringExtra(Intent.EXTRA_SUBJECT).orEmpty()
+        if (Uri.parse(url).host?.equals("share.google", ignoreCase = true) == true) {
+            webSearchMode = true
+            webView.loadUrl(url)
+            intent.action = null
+            return true
+        }
         val importUrl = Uri.parse(APP_URL).buildUpon()
             .appendQueryParameter("url", url)
             .appendQueryParameter("title", title)
